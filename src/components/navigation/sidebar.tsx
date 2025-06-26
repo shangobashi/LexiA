@@ -20,7 +20,7 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
     >
       {/* Logo */}
       <div className="p-4 border-b border-border flex items-center">
-        <img src="/owl-logo.png" alt="LexiA Logo" className="h-10 w-10 object-contain" />
+        <img src={`${import.meta.env.BASE_URL}owl-logo.png`} alt="LexiA Logo" className="h-10 w-10 object-contain" />
         {!collapsed && (
           <motion.span
             initial={{ opacity: 0 }}
