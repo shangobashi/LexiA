@@ -2,14 +2,18 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { getMockCaseById } from '@/lib/mock-data';
 import { Case } from '@/types/case';
 import { ChevronLeft, FileText, Settings, MessageSquare, Edit, ArrowRight, Clock, AlertCircle } from 'lucide-react';
 import ChatInterface from '@/components/chat/chat-interface';
-import PromptEditor from '@/components/cases/prompt-editor';
 import { Message } from '@/types/message';
 import { v4 as uuidv4 } from 'uuid';
+import { AIProvider, AIMessage, generateAIResponse } from '@/lib/ai-service';
+import { config } from '@/lib/config';
+import { analyzeCaseDocuments } from '@/lib/ai-service';
+import { AIProviderSwitch } from '@/components/ai-provider-switch';
 
 export default function CaseDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +23,7 @@ export default function CaseDetailPage() {
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('chat');
+  const [aiProvider, setAIProvider] = useState<AIProvider>(config.ai.defaultProvider);
   
   useEffect(() => {
     const fetchCase = async () => {
@@ -53,7 +58,7 @@ export default function CaseDetailPage() {
     }
   }, [id, navigate, toast]);
   
-  const handleSendMessage = (content: string) => {
+  const handleSendMessage = async (content: string) => {
     if (!caseData) return;
     
     // Create new user message
@@ -65,31 +70,64 @@ export default function CaseDetailPage() {
       caseId: caseData.id,
     };
     
-    // Create simulated assistant response
-    const assistantMessage: Message = {
-      id: uuidv4(),
-      content: `Based on Belgian law, I'd like to address your question about "${content.substring(0, 30)}...". According to Article 1382 of the Civil Code, any act that causes damage to another person creates an obligation to compensate for that damage. Would you like me to provide more specific legal advice on this matter?`,
-      sender: 'assistant',
-      timestamp: new Date(Date.now() + 2000).toISOString(),
-      caseId: caseData.id,
-    };
-    
     // Update state with user message immediately
     setCaseData({
       ...caseData,
       messages: [...caseData.messages, userMessage],
     });
-    
-    // Simulate AI response delay
-    setTimeout(() => {
-      setCaseData((prev) => {
+
+    try {
+      // Convert previous messages to AI format
+      const messageHistory: AIMessage[] = caseData.messages.map(msg => ({
+        role: msg.sender as 'user' | 'assistant',
+        content: msg.content
+      }));
+
+      // Add the new message
+      messageHistory.push({
+        role: 'user',
+        content
+      });
+
+      // Get AI response with current provider
+      const response = await generateAIResponse(
+        messageHistory, 
+        caseData.systemPrompt,
+        {
+          provider: aiProvider,
+          apiKey: aiProvider === 'openai' ? config.ai.openai.apiKey : config.ai.huggingface.apiKey
+        }
+      );
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      // Create assistant message
+      const assistantMessage: Message = {
+        id: uuidv4(),
+        content: response.message,
+        sender: 'assistant',
+        timestamp: new Date().toISOString(),
+        caseId: caseData.id,
+      };
+
+      // Update state with assistant message
+      setCaseData(prev => {
         if (!prev) return prev;
         return {
           ...prev,
           messages: [...prev.messages, assistantMessage],
         };
       });
-    }, 2000);
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to get AI response. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
   
   const handleClearChat = () => {
@@ -105,15 +143,36 @@ export default function CaseDetailPage() {
     });
   };
   
-  const handleFileUpload = (files: File[]) => {
+  const handleFileUpload = async (files: File[]) => {
     if (!caseData) return;
     
-    // Simulate file upload
-    toast({
-      title: 'Files uploaded',
-      description: `${files.length} files have been added to this case`,
-      variant: 'success',
-    });
+    try {
+      const response = await analyzeCaseDocuments(
+        files.map(f => f.name), 
+        caseData.systemPrompt,
+        {
+          provider: aiProvider,
+          apiKey: aiProvider === 'openai' ? config.ai.openai.apiKey : config.ai.huggingface.apiKey
+        }
+      );
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      toast({
+        title: 'Files analyzed',
+        description: `${files.length} files have been processed`,
+        variant: 'success',
+      });
+    } catch (error) {
+      console.error('Error analyzing files:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to analyze files. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
   
   const handlePromptSave = (value: string) => {
@@ -121,6 +180,14 @@ export default function CaseDetailPage() {
     setCaseData({
       ...caseData,
       systemPrompt: value,
+    });
+  };
+  
+  const handleProviderChange = (provider: AIProvider) => {
+    setAIProvider(provider);
+    toast({
+      title: 'AI Provider Changed',
+      description: `Switched to ${provider === 'openai' ? 'OpenAI (Premium)' : 'HuggingFace (Free)'}`,
     });
   };
   
@@ -148,41 +215,25 @@ export default function CaseDetailPage() {
   return (
     <div className="h-full flex flex-col">
       {/* Case Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-        <div>
-          <div className="flex items-center mb-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mr-2 -ml-2"
-              onClick={() => navigate('/cases')}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <h1 className="text-2xl font-bold truncate">{caseData.title}</h1>
-            <div className={`ml-3 px-2 py-0.5 rounded-full text-xs font-medium ${ 
-              caseData.status === 'active' ? 'bg-success/20 text-success' :
-              caseData.status === 'closed' ? 'bg-muted text-muted-foreground' :
-              'bg-warning/20 text-warning'
-            }`}>
-              {caseData.status.charAt(0).toUpperCase() + caseData.status.slice(1)}
-            </div>
+      <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/cases')}>
+            <ChevronLeft className="h-4 w-4 mr-2" /> Back to Cases
+          </Button>
+          <div>
+            <h1 className="text-xl font-semibold">{caseData.title}</h1>
+            <p className="text-sm text-muted-foreground">Case ID: {caseData.caseId}</p>
           </div>
-          <p className="text-muted-foreground text-sm">Case ID: {caseData.caseId}</p>
         </div>
         
         <div className="flex items-center space-x-2">
-          <div className="text-sm text-muted-foreground hidden sm:block">
-            <div className="flex items-center">
-              <Clock className="h-3 w-3 mr-1" />
-              <span>Created: {new Date(caseData.createdAt).toLocaleDateString()}</span>
-            </div>
-          </div>
-          
+          <AIProviderSwitch
+            currentProvider={aiProvider}
+            onProviderChange={handleProviderChange}
+          />
           <Button variant="outline" size="sm">
             <Edit className="h-4 w-4 mr-2" /> Edit Case
           </Button>
-          
           <Button size="sm">
             <ArrowRight className="h-4 w-4 mr-2" /> Actions
           </Button>
@@ -290,18 +341,6 @@ export default function CaseDetailPage() {
                         />
                       </div>
                     </div>
-                  </div>
-                  
-                  {/* System Prompt Section */}
-                  <div>
-                    <h4 className="font-medium mb-3">System Prompt Configuration</h4>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Customize the AI system prompt to tailor Dominus's behavior for this specific case.
-                    </p>
-                    <PromptEditor 
-                      initialValue={caseData.systemPrompt} 
-                      onSave={handlePromptSave} 
-                    />
                   </div>
                   
                   {/* Case Status Section */}

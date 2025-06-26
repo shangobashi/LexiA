@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FileUploader } from '@/components/uploads/file-uploader';
-import PromptEditor from '@/components/cases/prompt-editor';
 import { useToast } from '@/hooks/use-toast';
 import { DEFAULT_SYSTEM_PROMPT } from '@/lib/mock-data';
 import { v4 as uuidv4 } from 'uuid';
@@ -16,7 +15,6 @@ export default function NewCasePage() {
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT);
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -56,10 +54,6 @@ export default function NewCasePage() {
   
   const handleFileRemove = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
-  };
-  
-  const handlePromptSave = (value: string) => {
-    setSystemPrompt(value);
   };
   
   return (
@@ -125,39 +119,20 @@ export default function NewCasePage() {
           />
         </div>
         
-        {/* System Prompt Editor */}
-        <div className="bg-card border border-border rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">System Prompt Configuration</h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            Customize the AI system prompt to tailor Dominus's behavior for this specific case.
-          </p>
-          
-          <PromptEditor initialValue={systemPrompt} onSave={handlePromptSave} />
-        </div>
-        
         {/* Submit Buttons */}
         <div className="flex justify-end space-x-4">
           <Button
-            type="button"
             variant="outline"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/cases')}
             disabled={isSubmitting}
           >
             Cancel
           </Button>
-          
-          <Button type="submit" disabled={isSubmitting || !title || !description}>
-            {isSubmitting ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white\" xmlns="http://www.w3.org/2000/svg\" fill="none\" viewBox="0 0 24 24">
-                  <circle className="opacity-25\" cx="12\" cy="12\" r="10\" stroke="currentColor\" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Creating...
-              </>
-            ) : (
-              'Create Case'
-            )}
+          <Button
+            type="submit"
+            disabled={isSubmitting || !title.trim() || !description.trim()}
+          >
+            {isSubmitting ? 'Creating...' : 'Create Case'}
           </Button>
         </div>
       </form>
