@@ -23,7 +23,7 @@ export default function LoginPage() {
       await login(email, password);
       toast({
         title: "Login successful",
-        description: "Welcome back to Dominus",
+        description: "Welcome back to LexiA",
         variant: "success",
       });
       navigate('/dashboard');
@@ -43,7 +43,7 @@ export default function LoginPage() {
       await googleLogin();
       toast({
         title: "Login successful",
-        description: "Welcome back to Dominus",
+        description: "Welcome back to LexiA",
         variant: "success",
       });
       navigate('/dashboard');
@@ -61,7 +61,7 @@ export default function LoginPage() {
       await microsoftLogin();
       toast({
         title: "Login successful",
-        description: "Welcome back to Dominus",
+        description: "Welcome back to LexiA",
         variant: "success",
       });
       navigate('/dashboard');
@@ -79,7 +79,7 @@ export default function LoginPage() {
       {/* Mobile Logo (visible on smaller screens) */}
       <div className="flex flex-col items-center mb-6 lg:hidden">
         <Scale className="h-12 w-12 text-primary mb-4" />
-        <h1 className="text-2xl font-bold">Dominus</h1>
+        <h1 className="text-2xl font-bold">LexiA</h1>
         <p className="text-muted-foreground text-sm">Your AI Legal Assistant</p>
       </div>
       

@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Button, type ButtonProps } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { getMockCaseById } from '@/lib/mock-data';
+import { getMockCaseById, updateMockCase } from '@/lib/mock-data';
 import { Case } from '@/types/case';
 import { ChevronLeft, FileText, Settings, MessageSquare, Edit, ArrowRight, Clock, AlertCircle } from 'lucide-react';
 import ChatInterface from '@/components/chat/chat-interface';
 import { Message } from '@/types/message';
 import { v4 as uuidv4 } from 'uuid';
-import { AIProvider, AIMessage, generateAIResponse } from '@/lib/ai-service';
+import { AIProvider, AIMessage, generateAIResponse, initializeAI } from '@/lib/ai-service';
 import { config } from '@/lib/config';
 import { analyzeCaseDocuments } from '@/lib/ai-service';
 import { AIProviderSwitch } from '@/components/ai-provider-switch';
@@ -24,6 +24,14 @@ export default function CaseDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('chat');
   const [aiProvider, setAIProvider] = useState<AIProvider>(config.ai.defaultProvider);
+  
+  useEffect(() => {
+    // Initialize AI service
+    initializeAI({
+      provider: aiProvider,
+      apiKey: aiProvider === 'openai' ? config.ai.openai.apiKey : config.ai.huggingface.apiKey
+    });
+  }, [aiProvider]);
   
   useEffect(() => {
     const fetchCase = async () => {
@@ -71,15 +79,17 @@ export default function CaseDetailPage() {
     };
     
     // Update state with user message immediately
-    setCaseData({
+    const updatedCase = {
       ...caseData,
       messages: [...caseData.messages, userMessage],
-    });
+    };
+    setCaseData(updatedCase);
+    updateMockCase(updatedCase);
 
     try {
       // Convert previous messages to AI format
-      const messageHistory: AIMessage[] = caseData.messages.map(msg => ({
-        role: msg.sender as 'user' | 'assistant',
+      const messageHistory: AIMessage[] = updatedCase.messages.map((msg: Message) => ({
+        role: msg.sender,
         content: msg.content
       }));
 
@@ -113,13 +123,12 @@ export default function CaseDetailPage() {
       };
 
       // Update state with assistant message
-      setCaseData(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          messages: [...prev.messages, assistantMessage],
-        };
-      });
+      const finalCase = {
+        ...updatedCase,
+        messages: [...updatedCase.messages, assistantMessage],
+      };
+      setCaseData(finalCase);
+      updateMockCase(finalCase);
     } catch (error) {
       console.error('Error getting AI response:', error);
       toast({
@@ -132,10 +141,12 @@ export default function CaseDetailPage() {
   
   const handleClearChat = () => {
     if (!caseData) return;
-    setCaseData({
+    const updatedCase = {
       ...caseData,
       messages: [],
-    });
+    };
+    setCaseData(updatedCase);
+    updateMockCase(updatedCase);
     
     toast({
       title: 'Conversation cleared',
@@ -173,14 +184,6 @@ export default function CaseDetailPage() {
         variant: 'destructive',
       });
     }
-  };
-  
-  const handlePromptSave = (value: string) => {
-    if (!caseData) return;
-    setCaseData({
-      ...caseData,
-      systemPrompt: value,
-    });
   };
   
   const handleProviderChange = (provider: AIProvider) => {
@@ -241,145 +244,139 @@ export default function CaseDetailPage() {
       </div>
       
       {/* Case Content */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          <div className="border-b border-border">
-            <TabsList className="bg-transparent px-0 h-12">
-              <TabsTrigger value="chat" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none h-12 px-4">
-                <MessageSquare className="h-4 w-4 mr-2" /> Chat
-              </TabsTrigger>
-              <TabsTrigger value="documents" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none h-12 px-4">
-                <FileText className="h-4 w-4 mr-2" /> Documents ({caseData.documents.length})
-              </TabsTrigger>
-              <TabsTrigger value="settings" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none h-12 px-4">
-                <Settings className="h-4 w-4 mr-2" /> Settings
-              </TabsTrigger>
-            </TabsList>
-          </div>
-          
-          <div className="flex-1 overflow-hidden">
-            <TabsContent value="chat" className="h-full m-0 data-[state=active]:flex-1 data-[state=active]:flex data-[state=active]:flex-col">
-              <ChatInterface
-                messages={caseData.messages}
-                onSend={handleSendMessage}
-                onClearChat={handleClearChat}
-                onFileUpload={handleFileUpload}
-              />
-            </TabsContent>
-            
-            <TabsContent value="documents" className="m-0 p-4 h-full overflow-auto">
-              {caseData.documents.length > 0 ? (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold">Case Documents</h3>
-                    <Button size="sm">
-                      <FileText className="h-4 w-4 mr-2" /> Upload New
-                    </Button>
-                  </div>
-                  
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {caseData.documents.map((doc) => (
-                      <div 
-                        key={doc.id}
-                        className="border border-border rounded-lg p-4 bg-card hover:border-primary transition-colors"
-                      >
-                        <div className="flex items-start">
-                          <div className="mr-3 p-2 rounded-md bg-background">
-                            <FileText className="h-6 w-6 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{doc.name}</p>
-                            <div className="flex items-center text-xs text-muted-foreground mt-1">
-                              <span>{new Date(doc.uploadedAt).toLocaleDateString()}</span>
-                              <span className="mx-2">•</span>
-                              <span>{(doc.size / 1024 / 1024).toFixed(2)} MB</span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="flex justify-end mt-3 pt-3 border-t border-border">
-                          <Button variant="outline" size="sm">View</Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No documents yet</h3>
-                  <p className="text-muted-foreground mb-4">Upload documents relevant to this case</p>
-                  <Button>
-                    <FileText className="h-4 w-4 mr-2" /> Upload Documents
-                  </Button>
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="settings" className="m-0 p-4 h-full overflow-auto">
-              <div className="max-w-3xl">
-                <h3 className="text-lg font-semibold mb-4">Case Settings</h3>
-                
-                <div className="space-y-6">
-                  {/* Case Details Section */}
-                  <div>
-                    <h4 className="font-medium mb-3">Case Information</h4>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div>
-                        <label className="text-sm text-muted-foreground">Case Title</label>
-                        <Input value={caseData.title} className="mt-1" />
-                      </div>
-                      <div>
-                        <label className="text-sm text-muted-foreground">Case ID</label>
-                        <Input value={caseData.caseId} disabled className="mt-1 bg-muted" />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <label className="text-sm text-muted-foreground">Description</label>
-                        <textarea 
-                          value={caseData.description}
-                          className="w-full min-h-[100px] p-3 rounded-md border border-input bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary mt-1"
-                        />
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+        <div className="border-b border-border">
+          <TabsList className="bg-transparent px-0 h-12">
+            <TabsTrigger value="chat" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none h-12 px-4">
+              <MessageSquare className="h-4 w-4 mr-2" /> Chat
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none h-12 px-4">
+              <FileText className="h-4 w-4 mr-2" /> Documents ({caseData.documents.length})
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none h-12 px-4">
+              <Settings className="h-4 w-4 mr-2" /> Settings
+            </TabsTrigger>
+          </TabsList>
+        </div>
+        
+        <TabsContent value="chat" className="flex-1 m-0 p-0">
+          <ChatInterface
+            messages={caseData.messages}
+            onSend={handleSendMessage}
+            onClearChat={handleClearChat}
+            onFileUpload={handleFileUpload}
+          />
+        </TabsContent>
+        
+        <TabsContent value="documents" className="flex-1 m-0 p-4 overflow-auto">
+          {caseData.documents.length > 0 ? (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Case Documents</h3>
+                <Button size="sm">
+                  <FileText className="h-4 w-4 mr-2" /> Upload New
+                </Button>
+              </div>
+              
+              {caseData.documents.map((doc) => (
+                <div 
+                  key={doc.id}
+                  className="border border-border rounded-lg p-4 bg-card hover:border-primary transition-colors"
+                >
+                  <div className="flex items-start">
+                    <div className="mr-3 p-2 rounded-md bg-background">
+                      <FileText className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{doc.name}</p>
+                      <div className="flex items-center text-xs text-muted-foreground mt-1">
+                        <span>{new Date(doc.uploadedAt).toLocaleDateString()}</span>
+                        <span className="mx-2">•</span>
+                        <span>{(doc.size / 1024 / 1024).toFixed(2)} MB</span>
                       </div>
                     </div>
                   </div>
                   
-                  {/* Case Status Section */}
-                  <div>
-                    <h4 className="font-medium mb-3">Case Status</h4>
-                    <div className="flex items-center space-x-4">
-                      <Button 
-                        variant={caseData.status === 'active' ? 'success' : 'outline'}
-                        className="w-32"
-                      >
-                        Active
-                      </Button>
-                      <Button 
-                        variant={caseData.status === 'pending' ? 'warning' : 'outline'}
-                        className="w-32"
-                      >
-                        Pending
-                      </Button>
-                      <Button 
-                        variant={caseData.status === 'closed' ? 'secondary' : 'outline'}
-                        className="w-32"
-                      >
-                        Closed
-                      </Button>
-                    </div>
+                  <div className="flex justify-end mt-3 pt-3 border-t border-border">
+                    <Button variant="outline" size="sm">View</Button>
                   </div>
-                  
-                  {/* Save Button */}
-                  <div className="pt-4 border-t border-border">
-                    <Button className="w-32">
-                      Save Changes
-                    </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">No documents yet</h3>
+              <p className="text-muted-foreground mb-4">Upload documents relevant to this case</p>
+              <Button>
+                <FileText className="h-4 w-4 mr-2" /> Upload Documents
+              </Button>
+            </div>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="settings" className="flex-1 m-0 p-4 overflow-auto">
+          <div className="max-w-3xl">
+            <h3 className="text-lg font-semibold mb-4">Case Settings</h3>
+            
+            {/* Case Details Section */}
+            <div className="space-y-6">
+              <div>
+                <h4 className="font-medium mb-3">Case Information</h4>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="text-sm text-muted-foreground">Case Title</label>
+                    <Input value={caseData.title} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">Case ID</label>
+                    <Input value={caseData.caseId} disabled className="mt-1 bg-muted" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-sm text-muted-foreground">Description</label>
+                    <textarea 
+                      value={caseData.description}
+                      className="w-full min-h-[100px] p-3 rounded-md border border-input bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary mt-1"
+                    />
                   </div>
                 </div>
               </div>
-            </TabsContent>
+              
+              {/* Case Status Section */}
+              <div>
+                <h4 className="font-medium mb-3">Case Status</h4>
+                <div className="flex items-center space-x-4">
+                  <Button 
+                    variant={caseData.status === 'active' ? 'default' : 'outline'}
+                    className="w-32"
+                  >
+                    Active
+                  </Button>
+                  <Button 
+                    variant={caseData.status === 'pending' ? 'warning' : 'outline'}
+                    className="w-32"
+                  >
+                    Pending
+                  </Button>
+                  <Button 
+                    variant={caseData.status === 'closed' ? 'secondary' : 'outline'}
+                    className="w-32"
+                  >
+                    Closed
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Save Button */}
+              <div className="pt-4 border-t border-border">
+                <Button className="w-32">
+                  Save Changes
+                </Button>
+              </div>
+            </div>
           </div>
-        </Tabs>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

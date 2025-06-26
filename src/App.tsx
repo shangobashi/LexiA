@@ -1,5 +1,4 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './hooks/use-auth';
 import DashboardLayout from './components/layouts/dashboard-layout';
 import AuthLayout from './components/layouts/auth-layout';
 import LoginPage from './pages/login';
@@ -13,37 +12,29 @@ import UploadsPage from './pages/uploads';
 import AccountPage from './pages/account';
 
 function App() {
-  const { user, loading } = useAuth();
-  
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center w-screen h-screen bg-background">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-  
+  // Temporarily removed auth check for development
   return (
     <Routes>
       {/* Auth Routes */}
       <Route element={<AuthLayout />}>
-        <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/dashboard" />} />
-        <Route path="/register" element={!user ? <RegisterPage /> : <Navigate to="/dashboard" />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
       </Route>
       
-      {/* Protected Routes */}
+      {/* Routes without auth protection */}
       <Route element={<DashboardLayout />}>
-        <Route path="/dashboard" element={user ? <DashboardPage /> : <Navigate to="/login" />} />
-        <Route path="/new-case" element={user ? <NewCasePage /> : <Navigate to="/login" />} />
-        <Route path="/cases" element={user ? <CasesPage /> : <Navigate to="/login" />} />
-        <Route path="/cases/:id" element={user ? <CaseDetailPage /> : <Navigate to="/login" />} />
-        <Route path="/billing" element={user ? <BillingPage /> : <Navigate to="/login" />} />
-        <Route path="/uploads" element={user ? <UploadsPage /> : <Navigate to="/login" />} />
-        <Route path="/account" element={user ? <AccountPage /> : <Navigate to="/login" />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/new-case" element={<NewCasePage />} />
+        <Route path="/cases" element={<CasesPage />} />
+        <Route path="/cases/:id" element={<CaseDetailPage />} />
+        <Route path="/billing" element={<BillingPage />} />
+        <Route path="/uploads" element={<UploadsPage />} />
+        <Route path="/account" element={<AccountPage />} />
       </Route>
       
-      {/* Redirect to dashboard or login based on auth status */}
-      <Route path="*" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
+      {/* Redirect to dashboard by default */}
+      <Route path="/" element={<Navigate to="/dashboard" />} />
+      <Route path="*" element={<Navigate to="/dashboard" />} />
     </Routes>
   );
 }

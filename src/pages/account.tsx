@@ -5,17 +5,38 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { User, Shield, Lock, Bell, LogOut } from 'lucide-react';
+import { User, Shield, Lock, Bell, LogOut, Download } from 'lucide-react';
+import * as RadixSwitch from '@radix-ui/react-switch';
 
 export default function AccountPage() {
-  const { user, updateProfile, logout } = useAuth();
+  const { user, updateProfile, logout, loading } = useAuth();
   const { toast } = useToast();
+  
+  if (loading || !user) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <span className="text-muted-foreground">Loading account...</span>
+      </div>
+    );
+  }
   
   const [name, setName] = useState(user?.displayName || '');
   const [email, setEmail] = useState(user?.email || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  
+  // Notification toggles state
+  const [notifications, setNotifications] = useState({
+    'Case updates': true,
+    'New messages': true,
+    'Billing and payment': true,
+    'System notifications': true,
+  });
+
+  const handleToggle = (key: string) => {
+    setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
   
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,7 +165,7 @@ export default function AccountPage() {
                 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <label htmlFor="name" className="text-sm font-medium">
+                    <label htmlFor="name" className="text-sm font-medium block mb-2">
                       Full Name
                     </label>
                     <div className="relative">
@@ -159,7 +180,7 @@ export default function AccountPage() {
                   </div>
                   
                   <div className="space-y-2">
-                    <label htmlFor="email" className="text-sm font-medium">
+                    <label htmlFor="email" className="text-sm font-medium block mb-2">
                       Email Address
                     </label>
                     <div className="relative">
@@ -220,7 +241,7 @@ export default function AccountPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label htmlFor="current-password" className="text-sm font-medium">
+                    <label htmlFor="current-password" className="text-sm font-medium block mb-2">
                       Current Password
                     </label>
                     <div className="relative">
@@ -236,7 +257,7 @@ export default function AccountPage() {
                   </div>
                   
                   <div className="space-y-2">
-                    <label htmlFor="new-password" className="text-sm font-medium">
+                    <label htmlFor="new-password" className="text-sm font-medium block mb-2">
                       New Password
                     </label>
                     <div className="relative">
@@ -252,7 +273,7 @@ export default function AccountPage() {
                   </div>
                   
                   <div className="space-y-2">
-                    <label htmlFor="confirm-password" className="text-sm font-medium">
+                    <label htmlFor="confirm-password" className="text-sm font-medium block mb-2">
                       Confirm New Password
                     </label>
                     <div className="relative">
@@ -310,17 +331,30 @@ export default function AccountPage() {
             <CardContent className="space-y-4">
               <div className="space-y-4">
                 <h3 className="font-medium">Email Notifications</h3>
-                
                 <div className="space-y-2">
-                  {['Case updates', 'New messages', 'Billing and payment', 'System notifications'].map((item, i) => (
+                  {Object.keys(notifications).map((item, i) => (
                     <div key={i} className="flex items-center justify-between p-3 border border-border rounded-md">
                       <div className="flex items-center">
                         <Bell className="h-4 w-4 mr-3 text-muted-foreground" />
                         <span>{item}</span>
                       </div>
-                      <div className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background bg-primary">
-                        <span className="inline-block h-4 w-4 translate-x-6 transform rounded-full bg-white transition-transform" />
-                      </div>
+                      <RadixSwitch.Root
+                        checked={notifications[item]}
+                        onCheckedChange={() => handleToggle(item)}
+                        className={
+                          `w-11 h-6 rounded-full relative transition-colors outline-none border-none ` +
+                          `focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ` +
+                          `bg-gray-700 data-[state=checked]:bg-green-500`
+                        }
+                        id={`notif-switch-${i}`}
+                      >
+                        <RadixSwitch.Thumb
+                          className={
+                            `block w-5 h-5 rounded-full bg-white shadow transition-transform ` +
+                            `translate-x-0 data-[state=checked]:translate-x-5`
+                          }
+                        />
+                      </RadixSwitch.Root>
                     </div>
                   ))}
                 </div>
@@ -347,7 +381,7 @@ export default function AccountPage() {
               <div>
                 <h3 className="font-medium mb-3">Data Export</h3>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Request a copy of your personal data stored in Dominus
+                  Request a copy of your personal data stored in LexiA
                 </p>
                 <Button variant="outline">
                   <Download className="h-4 w-4 mr-2" />

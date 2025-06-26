@@ -84,7 +84,7 @@ export default function UploadsPage() {
     };
     
     fetchDocuments();
-  }, [toast]);
+  }, []);
   
   const handleFilesAdded = (files: File[]) => {
     setUploadedFiles(prev => [...prev, ...files]);

@@ -9,7 +9,10 @@ interface HeaderProps {
 }
 
 export default function Header({ toggleSidebar, isCollapsed }: HeaderProps) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  
+  const displayName = user?.displayName || user?.email || 'Guest User';
+  const initials = getUserInitials(displayName);
   
   return (
     <header className="h-16 border-b border-border flex items-center px-4 bg-card">
@@ -43,12 +46,12 @@ export default function Header({ toggleSidebar, isCollapsed }: HeaderProps) {
         {/* User Menu */}
         <div className="flex items-center space-x-3">
           <div className="hidden md:block text-right">
-            <p className="text-sm font-medium">{user?.displayName || user?.email}</p>
+            <p className="text-sm font-medium">{displayName}</p>
             <p className="text-xs text-muted-foreground">Premium Plan</p>
           </div>
           
           <div className="h-9 w-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-medium">
-            {getUserInitials(user?.displayName || user?.email || '')}
+            {initials}
           </div>
         </div>
       </div>

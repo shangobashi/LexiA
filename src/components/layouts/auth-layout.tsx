@@ -10,7 +10,7 @@ export default function AuthLayout() {
           <div className="mb-8 inline-flex p-4 bg-primary/10 rounded-full">
             <Scale className="h-12 w-12 text-primary" />
           </div>
-          <h1 className="text-4xl font-bold tracking-tight mb-4">Dominus</h1>
+          <h1 className="text-4xl font-bold tracking-tight mb-4">LexiA</h1>
           <p className="text-xl text-muted-foreground mb-6">
             Your AI-powered legal assistant specialized in Belgian law
           </p>

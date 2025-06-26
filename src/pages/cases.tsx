@@ -98,7 +98,7 @@ export default function CasesPage() {
           ) : (
             <>
               <h3 className="font-medium text-lg mb-2">No cases yet</h3>
-              <p className="text-muted-foreground mb-4">Create your first case to get started with Dominus</p>
+              <p className="text-muted-foreground mb-4">Create your first case to get started with LexiA</p>
               <Button asChild>
                 <Link to="/new-case">
                   <Plus className="mr-2 h-4 w-4" /> Create a case

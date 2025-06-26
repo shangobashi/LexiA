@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Case } from '@/types/case';
+import { Case, CaseStatus } from '@/types/case';
 import { Message } from '@/types/message';
 import { Document } from '@/types/document';
 import { generateCaseId } from './utils';
@@ -188,8 +188,15 @@ const generateMockDocuments = (caseId: string, count: number = 2): Document[] =>
   return documents;
 };
 
+// Store mock cases in memory
+let mockCases: Case[] | null = null;
+
 // Generate mock cases
 export const getMockCases = (): Case[] => {
+  if (mockCases) {
+    return mockCases;
+  }
+
   const cases: Case[] = [];
   const caseTypes = [
     { title: 'Rental Dispute', description: 'Dispute with landlord regarding property damage and security deposit' },
@@ -199,38 +206,54 @@ export const getMockCases = (): Case[] => {
     { title: 'Business Contract Review', description: 'Review of business partnership agreement' }
   ];
   
-  const statuses: Array<'active' | 'pending' | 'closed'> = ['active', 'pending', 'closed'];
+  const statuses: CaseStatus[] = ['active', 'pending', 'closed'];
   const now = new Date();
-  const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   
   for (let i = 0; i < 5; i++) {
     const caseType = caseTypes[i % caseTypes.length];
     const caseId = generateCaseId();
-    const id = uuidv4();
-    const createdAt = getRandomDate(monthAgo, now).toISOString();
-    const updatedAt = getRandomDate(new Date(createdAt), now).toISOString();
+    const status = statuses[Math.floor(Math.random() * statuses.length)];
+    const createdAt = getRandomDate(new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000), now).toISOString();
     
-    cases.push({
-      id,
+    const newCase: Case = {
+      id: uuidv4(),
       caseId,
       title: caseType.title,
       description: caseType.description,
-      status: statuses[Math.floor(Math.random() * statuses.length)],
+      status,
       createdAt,
-      updatedAt,
-      messages: generateMockMessages(id, Math.floor(Math.random() * 10) + 2),
-      documents: generateMockDocuments(id, Math.floor(Math.random() * 3) + 1),
+      updatedAt: createdAt,
+      messages: generateMockMessages(caseId),
+      documents: generateMockDocuments(caseId),
       systemPrompt: DEFAULT_SYSTEM_PROMPT,
-      userId: 'user123',
-    });
+      userId: 'dev_user_123'
+    };
+    
+    cases.push(newCase);
   }
   
-  // Sort by most recent first
-  return cases.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  mockCases = cases.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return mockCases;
 };
 
 // Get a specific mock case by ID
 export const getMockCaseById = (id: string): Case | undefined => {
-  const cases = getMockCases();
-  return cases.find(c => c.id === id);
+  return getMockCases().find(c => c.id === id);
+};
+
+// Update a mock case
+export const updateMockCase = (updatedCase: Case): void => {
+  if (!mockCases) {
+    getMockCases();
+  }
+  
+  if (mockCases) {
+    const index = mockCases.findIndex(c => c.id === updatedCase.id);
+    if (index !== -1) {
+      mockCases[index] = {
+        ...updatedCase,
+        updatedAt: new Date().toISOString()
+      };
+    }
+  }
 };

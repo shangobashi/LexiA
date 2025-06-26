@@ -19,8 +19,8 @@ export default function CaseCard({ caseData, index }: CaseCardProps) {
       <Link to={`/cases/${caseData.id}`}>
         <div className="bg-card border border-border rounded-lg overflow-hidden hover:border-primary transition-colors duration-200">
           <div className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2 md:gap-0">
+              <div className="flex-1 min-w-0">
                 <h3 className="text-lg font-medium truncate">{caseData.title}</h3>
                 <p className="text-muted-foreground text-sm mt-1">
                   {caseData.description && caseData.description.length > 100 
@@ -28,9 +28,8 @@ export default function CaseCard({ caseData, index }: CaseCardProps) {
                     : caseData.description}
                 </p>
               </div>
-              
               <div className={cn(
-                "px-2 py-1 rounded-full text-xs font-medium",
+                "px-2 py-1 rounded-full text-xs font-medium w-fit md:ml-4 mt-2 md:mt-0",
                 caseData.status === 'active' && "bg-success/20 text-success",
                 caseData.status === 'closed' && "bg-muted text-muted-foreground",
                 caseData.status === 'pending' && "bg-warning/20 text-warning"

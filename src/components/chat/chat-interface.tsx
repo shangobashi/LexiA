@@ -67,7 +67,7 @@ export default function ChatInterface({
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <h3 className="text-lg font-medium mb-2">Start a new conversation</h3>
-              <p className="text-sm text-muted-foreground">Ask Dominus about Belgian law questions</p>
+              <p className="text-sm text-muted-foreground">Ask LexiA about Belgian law questions</p>
             </div>
           </div>
         ) : (
@@ -175,7 +175,7 @@ export default function ChatInterface({
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask Dominus a question..."
+              placeholder="Ask LexiA a question..."
               className="w-full rounded-full pl-4 pr-10 py-2 bg-card border border-border focus:border-primary focus:ring-0 focus:outline-none"
             />
           </div>

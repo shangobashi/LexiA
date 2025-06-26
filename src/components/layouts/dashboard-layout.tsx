@@ -1,15 +1,13 @@
 import { useState, ReactNode } from 'react';
-import { Outlet } from 'react-router-dom';
-import { useAuth } from '@/hooks/use-auth';
+import { Outlet, useLocation, useOutlet } from 'react-router-dom';
 import Sidebar from '@/components/navigation/sidebar';
 import Header from '@/components/navigation/header';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function DashboardLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { user } = useAuth();
-  
-  if (!user) return null;
+  const location = useLocation();
+  const outlet = useOutlet();
   
   return (
     <div className="flex h-screen bg-background text-foreground">
@@ -22,16 +20,16 @@ export default function DashboardLayout() {
         />
         
         <div className="flex-1 overflow-auto p-4 md:p-6">
-          <AnimatePresence mode="wait">
+          <AnimatePresence initial={false}>
             <motion.div
               key={location.pathname}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
               className="h-full"
             >
-              <Outlet />
+              {outlet}
             </motion.div>
           </AnimatePresence>
         </div>

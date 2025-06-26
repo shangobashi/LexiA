@@ -69,10 +69,10 @@ export default function BillingPage() {
           {
             id: 'plan-free',
             name: 'Free Trial',
-            description: 'For individuals who want to try Dominus',
+            description: 'For individuals who want to try LexiA',
             price: 0,
             features: [
-              '5 legal consultations',
+              '3 legal consultations',
               '2 document generations',
               'Access to basic Belgian law resources',
               'Limited document storage (25MB)'
@@ -83,7 +83,7 @@ export default function BillingPage() {
             id: 'plan-basic',
             name: 'Basic',
             description: 'For individuals with occasional legal needs',
-            price: 14.99,
+            price: 49.99,
             features: [
               '25 legal consultations per month',
               '10 document generations',
@@ -97,7 +97,7 @@ export default function BillingPage() {
             id: 'plan-premium',
             name: 'Premium',
             description: 'For individuals with regular legal requirements',
-            price: 29.99,
+            price: 199.99,
             features: [
               'Unlimited legal consultations',
               'Unlimited document generations',
@@ -149,7 +149,7 @@ export default function BillingPage() {
             
             <div className="mt-4 md:mt-0 flex items-center">
               <div className="text-right mr-6">
-                <p className="font-semibold text-lg">{formatCurrency(29.99)}</p>
+                <p className="font-semibold text-lg">{formatCurrency(199.99)}</p>
                 <p className="text-sm text-muted-foreground">per month</p>
               </div>
               <div className="px-3 py-1 bg-success/10 text-success rounded-full text-xs font-medium">

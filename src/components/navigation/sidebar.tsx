@@ -20,7 +20,7 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
     >
       {/* Logo */}
       <div className="p-4 border-b border-border flex items-center">
-        <Scale className="h-8 w-8 text-primary" />
+        <img src="/owl-logo.png" alt="LexiA Logo" className="h-10 w-10 object-contain" />
         {!collapsed && (
           <motion.span
             initial={{ opacity: 0 }}
@@ -29,7 +29,7 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
             transition={{ duration: 0.2 }}
             className="ml-2 text-xl font-semibold"
           >
-            Dominus
+            LexiA
           </motion.span>
         )}
         <div className="ml-auto">
